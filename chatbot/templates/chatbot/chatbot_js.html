@@ -1,0 +1,80 @@
+{% load static %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('chatbot-form');
+    const questionInput = document.getElementById('question-input');
+    const resultsContainer = document.getElementById('results-container');
+    const sqlResult = document.getElementById('sql-result');
+    const resultsTable = document.getElementById('results-table');
+    const languageSelector = document.getElementById('language-selector');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const question = questionInput.value.trim();
+        const lang = languageSelector.value;
+        
+        if (!question) return;
+        
+        fetch('/ask/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                question: question,
+                lang: lang
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            // Display SQL
+            sqlResult.textContent = data.sql;
+            
+            // Display results in table
+            resultsTable.innerHTML = '';
+            
+            if (data.results.length > 0) {
+                // Create header row
+                const headerRow = document.createElement('tr');
+                Object.keys(data.results[0]).forEach(key => {
+                    const th = document.createElement('th');
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                });
+                resultsTable.appendChild(headerRow);
+                
+                // Create data rows
+                data.results.forEach(row => {
+                    const tr = document.createElement('tr');
+                    Object.values(row).forEach(value => {
+                        const td = document.createElement('td');
+                        td.textContent = value;
+                        tr.appendChild(td);
+                    });
+                    resultsTable.appendChild(tr);
+                });
+            }
+            
+            resultsContainer.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    });
+    
+    // Set RTL direction for Arabic
+    languageSelector.addEventListener('change', function() {
+        document.documentElement.lang = this.value;
+        document.documentElement.dir = this.value === 'ar' ? 'rtl' : 'ltr';
+    });
+});
+</script>
